@@ -1,0 +1,25 @@
+project_id = "otbrltaasqdownnpxnlv"
+
+[functions.generate-scorm]
+verify_jwt = false
+
+[functions.generate-course-ai]
+verify_jwt = false
+
+[functions.generate-scorm-from-course]
+verify_jwt = false
+
+[functions.generate-video-content]
+verify_jwt = false
+
+[functions.generate-video-audio]
+verify_jwt = false
+
+[functions.generate-video-scorm]
+verify_jwt = false
+
+[functions.generate-unified-course]
+verify_jwt = false
+
+[functions.generate-unified-scorm]
+verify_jwt = false
