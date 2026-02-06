@@ -37,6 +37,7 @@ serve(async (req) => {
     // 1. Try ElevenLabs API (Priority with redundancy)
     const ELEVEN_LABS_KEYS = [
       Deno.env.get("ELEVEN_LABS_API_KEY"),
+      Deno.env.get("ELEVENLABS_API_KEY"), // Alternative name
       Deno.env.get("ELEVEN_LABS_API_KEY_BACKUP")
     ].filter(Boolean) as string[];
 
@@ -78,15 +79,20 @@ serve(async (req) => {
             return new Response(
               JSON.stringify({
                 narration: `data:audio/mpeg;base64,${base64Audio}`,
-                // Calculate duration: (bytes * 8) / bitrate. ElevenLabs default is usually 128kbps = 128000 bps
                 duration: Math.ceil((audioBuffer.byteLength * 8) / 128000),
                 service: "elevenlabs"
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           } else {
-            console.error(`ElevenLabs Key #${index + 1} failed:`, response.status);
-            // Continue to next key
+            const errorText = await response.text();
+            console.error(`ElevenLabs Key #${index + 1} failed with status ${response.status}:`, errorText);
+            
+            if (response.status === 401) {
+              console.error("DEBUG: Invalid ElevenLabs API Key. Please check your Supabase secrets.");
+            } else if (response.status === 429 || response.status === 403) {
+              console.error("DEBUG: ElevenLabs quota exceeded or tier limit reached. Falling back...");
+            }
           }
         } catch (e) {
           console.error(`Error with ElevenLabs Key #${index + 1}:`, e);
@@ -97,31 +103,50 @@ serve(async (req) => {
 
 
 
-    // 2. Fallback to Free TTS (StreamElements - uses AWS Polly)
-    console.log(`Fallback: Generating narration using StreamElements for script length: ${script.length}`);
+    // 2. Fallback to Free TTS (Edge TTS via public API)
+    console.log(`Fallback: Generating narration using Edge TTS (Microsoft) for script length: ${script.length}`);
 
-    // StreamElements TTS (Free, Reliable, Good Quality)
-    // Voices: Vitoria (pt-BR female), Ricardo (pt-BR male)
-    const voiceName = voice === "male" ? "Ricardo" : "Vitoria";
-
-    // Note: StreamElements has a text limit per request (approx 500-100 chars effectively due to URL limit). 
-    // We should chunk meaningful sentences if text is long.
-    // For simplicity, we try the whole text, but if it fails, we return error.
-    // A robust implementation would chunk by sentence.
+    const voiceCode = voice === "male" ? "Antonio" : "Francisca";
 
     try {
-      const streamElementsUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${voiceName}&text=${encodeURIComponent(script)}`;
+      // Using a reliable public Edge TTS proxy/API
+      // This is the implementation mentioned in the README as "100% Free"
+      const edgeTtsUrl = `https://edge-tts.vercel.app/api/tts?text=${encodeURIComponent(script)}&voice=pt-BR-${voiceCode}Neural`;
 
-      // Check URL length - robust browsers handle 2000+, but fetch might be safer.
-      if (streamElementsUrl.length > 2000) {
-        console.warn("Script too long for free TTS fallback via GET request.");
-        // Proceed anyway, server might accept it or we fail and catch.
-      }
-
-      const fallbackResponse = await fetch(streamElementsUrl);
+      const fallbackResponse = await fetch(edgeTtsUrl);
 
       if (fallbackResponse.ok) {
         const audioBuffer = await fallbackResponse.arrayBuffer();
+        const base64Audio = btoa(
+          new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+        );
+
+        console.log("SUCCESS: Narration generated using Edge TTS (Microsoft)");
+
+        return new Response(
+          JSON.stringify({
+            narration: `data:audio/mpeg;base64,${base64Audio}`,
+            duration: Math.ceil((audioBuffer.byteLength * 8) / 48000), // Approx
+            service: "edge-tts-free"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        console.warn("Edge TTS failed, trying StreamElements...");
+      }
+    } catch (e) {
+      console.error("Edge TTS error:", e);
+    }
+
+    // 3. Fallback to StreamElements
+    try {
+      const voiceName = voice === "male" ? "Ricardo" : "Vitoria";
+      const streamElementsUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${voiceName}&text=${encodeURIComponent(script)}`;
+
+      const seResponse = await fetch(streamElementsUrl);
+
+      if (seResponse.ok) {
+        const audioBuffer = await seResponse.arrayBuffer();
         const base64Audio = btoa(
           new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
         );
@@ -131,16 +156,14 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             narration: `data:audio/mpeg;base64,${base64Audio}`,
-            duration: Math.ceil((audioBuffer.byteLength * 8) / 48000), // Approx 48kbps
+            duration: Math.ceil((audioBuffer.byteLength * 8) / 48000),
             service: "streamelements-free"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      } else {
-        console.warn("StreamElements TTS failed:", fallbackResponse.status);
       }
     } catch (e) {
-      console.error("Fallback TTS error:", e);
+      console.error("StreamElements fallback error:", e);
     }
 
     // 3. Last Resort: Google Translate TTS (Client-hack style)
