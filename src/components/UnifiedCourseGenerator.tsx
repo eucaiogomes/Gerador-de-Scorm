@@ -27,7 +27,10 @@ const SUGGESTIONS = [
   "Gestão de tempo",
 ];
 
+import { useNavigate } from "react-router-dom";
+
 export function UnifiedCourseGenerator() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [topic, setTopic] = useState("");
   const [scormVersion, setScormVersion] = useState<"1.2" | "2004">("1.2");
@@ -327,6 +330,16 @@ export function UnifiedCourseGenerator() {
                 Baixar SCORM Completo
               </>
             )}
+          </Button>
+
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full mt-2 border-primary/20 hover:bg-primary/5 text-primary"
+            onClick={() => navigate("/editor", { state: { course: generatedCourse } })}
+          >
+            <Sparkles className="h-5 w-5 mr-2" />
+            Editar no Editor Visual
           </Button>
         </>
       )}
