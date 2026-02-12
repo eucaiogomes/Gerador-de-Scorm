@@ -164,17 +164,20 @@ Regras:
 
     console.log("Course structure generated, generating images...");
 
+    console.log("Course structure generated, generating images sequentially to save resources...");
+
     // Step 2: Generate images for slides
-    const slideImagePromises = course.slides.map(async (slide, index) => {
+    const slidesWithImages = [];
+    for (const [index, slide] of course.slides.entries()) {
       try {
-        console.log(`Generating slide image ${index + 1}...`);
+        console.log(`Generating slide image ${index + 1}/${course.slides.length}...`);
 
         let base64Image = null;
 
         // 1. Try Pollinations (Primary - with Key)
         if (!base64Image) {
           try {
-            console.log(`Using Pollinations (Primary) for slide image ${index + 1}...`);
+            // console.log(`Using Pollinations (Primary) for slide image ${index + 1}...`);
             let imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
               `Professional educational illustration: ${slide.imagePrompt}. Clean, modern, suitable for e-learning. High quality, detailed.`
             )}.jpg?width=1280&height=720&model=turbo&seed=${Date.now() + index}&nologo=true`;
@@ -268,26 +271,28 @@ Regras:
         }
 
         if (base64Image) {
-          return { ...slide, imageBase64: `data:image/jpeg;base64,${base64Image}` };
+          slidesWithImages.push({ ...slide, imageBase64: `data:image/jpeg;base64,${base64Image}` });
+        } else {
+          slidesWithImages.push(slide);
         }
 
-        return slide;
       } catch (err) {
         console.error(`Error generating slide image ${index + 1}:`, err);
-        return slide;
+        slidesWithImages.push(slide);
       }
-    });
+    }
 
     // Step 3: Generate images for video scenes
-    const videoImagePromises = course.video.scenes.map(async (scene, index) => {
+    const scenesWithImages = [];
+    for (const [index, scene] of course.video.scenes.entries()) {
       try {
-        console.log(`Generating video scene image ${index + 1}...`);
+        console.log(`Generating video scene image ${index + 1}/${course.video.scenes.length}...`);
 
         let base64Image = null;
 
         // 1. Try Pollinations (Primary - with Key)
         if (!base64Image) {
-          console.log(`Using Pollinations (Primary) for video image ${index + 1}...`);
+          // console.log(`Using Pollinations (Primary) for video image ${index + 1}...`);
           let imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
             `Cinematic 16:9 video frame: ${scene.imagePrompt}. Ultra high quality, professional, detailed, photorealistic.`
           )}.jpg?width=1280&height=720&model=turbo&seed=${Date.now() + index + 1000}&nologo=true`;
@@ -371,21 +376,15 @@ Regras:
 
         if (base64Image) {
           console.log(`Image ${index + 1} generated successfully`);
-          return { ...scene, imageBase64: `data:image/jpeg;base64,${base64Image}` };
+          scenesWithImages.push({ ...scene, imageBase64: `data:image/jpeg;base64,${base64Image}` });
+        } else {
+          scenesWithImages.push({ ...scene, imageBase64: null });
         }
-
-        return { ...scene, imageBase64: null };
       } catch (err) {
         console.error(`Error generating video scene image ${index + 1}:`, err);
-        return { ...scene, imageBase64: null };
+        scenesWithImages.push({ ...scene, imageBase64: null });
       }
-    });
-
-    // Wait for all images
-    const [slidesWithImages, scenesWithImages] = await Promise.all([
-      Promise.all(slideImagePromises),
-      Promise.all(videoImagePromises),
-    ]);
+    }
 
     course.slides = slidesWithImages;
     course.video.scenes = scenesWithImages;
