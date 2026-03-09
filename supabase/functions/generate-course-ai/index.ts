@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -188,9 +189,7 @@ Regras:
 
             if (imageResponse.ok) {
               const imageBlob = await imageResponse.arrayBuffer();
-              base64Image = btoa(
-                new Uint8Array(imageBlob).reduce((data, byte) => data + String.fromCharCode(byte), "")
-              );
+              base64Image = encodeBase64(new Uint8Array(imageBlob));
             }
           }
 
@@ -214,9 +213,7 @@ Regras:
                   const imageUrl = randomPhoto.src.large;
                   const imageResponse = await fetch(imageUrl);
                   const imageBlob = await imageResponse.arrayBuffer();
-                  base64Image = btoa(
-                    new Uint8Array(imageBlob).reduce((data, byte) => data + String.fromCharCode(byte), "")
-                  );
+                  base64Image = encodeBase64(new Uint8Array(imageBlob));
                   console.log(`Slide ${index + 1} generated with Pexels API`);
                 }
               } else {
@@ -243,9 +240,7 @@ Regras:
                 if (data.urls && data.urls.regular) {
                   const imageResponse = await fetch(data.urls.regular);
                   const imageBlob = await imageResponse.arrayBuffer();
-                  base64Image = btoa(
-                    new Uint8Array(imageBlob).reduce((data, byte) => data + String.fromCharCode(byte), "")
-                  );
+                  base64Image = encodeBase64(new Uint8Array(imageBlob));
                   console.log(`Slide ${index + 1} generated with Unsplash API`);
                 }
               } else {

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,9 +71,7 @@ serve(async (req) => {
 
           if (response.ok) {
             const audioBuffer = await response.arrayBuffer();
-            const base64Audio = btoa(
-              new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-            );
+            const base64Audio = encodeBase64(new Uint8Array(audioBuffer));
 
             console.log(`SUCCESS: Narration generated using ElevenLabs Key #${index + 1}`);
 
@@ -87,7 +86,7 @@ serve(async (req) => {
           } else {
             const errorText = await response.text();
             console.error(`ElevenLabs Key #${index + 1} failed with status ${response.status}:`, errorText);
-            
+
             if (response.status === 401) {
               console.error("DEBUG: Invalid ElevenLabs API Key. Please check your Supabase secrets.");
             } else if (response.status === 429 || response.status === 403) {
@@ -117,9 +116,7 @@ serve(async (req) => {
 
       if (fallbackResponse.ok) {
         const audioBuffer = await fallbackResponse.arrayBuffer();
-        const base64Audio = btoa(
-          new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+        const base64Audio = encodeBase64(new Uint8Array(audioBuffer));
 
         console.log("SUCCESS: Narration generated using Edge TTS (Microsoft)");
 
@@ -147,9 +144,7 @@ serve(async (req) => {
 
       if (seResponse.ok) {
         const audioBuffer = await seResponse.arrayBuffer();
-        const base64Audio = btoa(
-          new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+        const base64Audio = encodeBase64(new Uint8Array(audioBuffer));
 
         console.log("Narration generated using StreamElements (fallback)");
 
@@ -175,9 +170,7 @@ serve(async (req) => {
 
       if (googleResponse.ok) {
         const audioBuffer = await googleResponse.arrayBuffer();
-        const base64Audio = btoa(
-          new Uint8Array(audioBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+        const base64Audio = encodeBase64(new Uint8Array(audioBuffer));
 
         return new Response(
           JSON.stringify({

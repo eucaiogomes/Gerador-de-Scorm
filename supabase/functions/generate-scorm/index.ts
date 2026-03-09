@@ -682,8 +682,12 @@ Deno.serve(async (req) => {
     const zipData = await zip.generateAsync({ type: "uint8array" });
     console.log("[generate-scorm] ZIP created, size:", zipData.length);
 
-    // Convert to base64
-    const base64 = btoa(String.fromCharCode(...zipData));
+    // Convert to base64 safely (spread operator causes stack overflow on large arrays)
+    let binary = "";
+    for (let i = 0; i < zipData.length; i++) {
+      binary += String.fromCharCode(zipData[i]);
+    }
+    const base64 = btoa(binary);
 
     return new Response(
       JSON.stringify({ zip: base64 }),
