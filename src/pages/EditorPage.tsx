@@ -31,25 +31,33 @@ export default function EditorPage() {
     const [state, setState] = useState<EditorState | null>(null);
 
     useEffect(() => {
-        if (!initialCourse) {
-            toast({
-                variant: "destructive",
-                title: "Erro",
-                description: "Nenhum curso selecionado para edição.",
-            });
-            navigate("/");
-            return;
-        }
+        // Use provided course or create an empty one for "Create from scratch" mode
+        const courseToEdit: UnifiedCourse = initialCourse || {
+            title: "Novo Curso SCORM",
+            slides: [
+                {
+                    title: "Novo Slide",
+                    content: "Comece a editar o conteúdo do seu curso aqui...",
+                }
+            ],
+            questions: [
+                {
+                    text: "Nova Pergunta",
+                    alternatives: ["Opção 1", "Opção 2"],
+                    correctIndex: 0,
+                }
+            ],
+        };
 
         // Initialize state
         setState({
-            course: JSON.parse(JSON.stringify(initialCourse)), // Deep copy
+            course: JSON.parse(JSON.stringify(courseToEdit)), // Deep copy
             activeTab: "slides",
             selectedSlideIndex: 0,
             selectedSceneIndex: 0,
             selectedQuestionIndex: 0,
-            slideStyles: initialCourse.slides.map(() => ({ ...defaultSlideStyle })),
-            sceneStyles: initialCourse.video?.scenes.map(() => ({ ...defaultSceneStyle })) || [],
+            slideStyles: courseToEdit.slides.map(() => ({ ...defaultSlideStyle })),
+            sceneStyles: courseToEdit.video?.scenes.map(() => ({ ...defaultSceneStyle })) || [],
             isDirty: false,
         });
     }, [initialCourse, navigate, toast]);
