@@ -31,7 +31,6 @@ export default function EditorPage() {
     const [state, setState] = useState<EditorState | null>(null);
 
     useEffect(() => {
-        // Use provided course or create an empty one for "Create from scratch" mode
         const courseToEdit: UnifiedCourse = initialCourse || {
             title: "Novo Curso SCORM",
             slides: [
@@ -40,6 +39,17 @@ export default function EditorPage() {
                     content: "Comece a editar o conteúdo do seu curso aqui...",
                 }
             ],
+            video: {
+                title: "Vídeo do Curso",
+                scenes: [
+                    {
+                        imagePrompt: "",
+                        narration: "Adicione a narração da sua cena...",
+                        duration: 5
+                    }
+                ],
+                totalDuration: 5
+            },
             questions: [
                 {
                     text: "Nova Pergunta",
